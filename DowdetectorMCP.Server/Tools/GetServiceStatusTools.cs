@@ -1,4 +1,5 @@
-﻿using ModelContextProtocol.Server;
+﻿using DowndetectorMCP.API;
+using ModelContextProtocol.Server;
 using System.ComponentModel;
 
 namespace DowdetectorMCP.Server.Tools
@@ -13,7 +14,11 @@ namespace DowdetectorMCP.Server.Tools
             [Description("The technical service name")] string technicalServiceName,
             [Description("The country in which we want to know the status of the service")] string localization)
         {
-            return "OK";
+            var downdetectorAPI = new DowndetectorAPI(localization);
+
+            var service = await downdetectorAPI.GetServiceStatus(technicalServiceName);
+
+            return "google-gemini";
         }
     }
 }

@@ -14,4 +14,8 @@
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="0.5.0-preview.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\DowndetectorMCP.API\DowndetectorMCP.API.csproj" />
+  </ItemGroup>
+
 </Project>
