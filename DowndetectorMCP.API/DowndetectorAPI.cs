@@ -54,7 +54,7 @@ namespace DowndetectorMCP.API
                 {
                     var link = card.Locator("a");
                     var foundServiceName = await card.Locator("a .caption h5").InnerTextAsync();
-                    var foundServiceUrl = CleanUrl(await link.GetAttributeAsync("href") ?? string.Empty);
+                    var foundServiceUrl = CleanUrl(this.BaseUrl + (await link.GetAttributeAsync("href") ?? string.Empty));
                     var foundTechnicalName = CleanTechnicalName(foundServiceUrl);
 
                     if (foundServiceName != null && link != null)
@@ -62,7 +62,7 @@ namespace DowndetectorMCP.API
                         searchResult.Results.Add(new SearchResultItem
                         {
                             ServiceName = foundServiceName.Trim(),
-                            TechnicalName = foundServiceName,
+                            TechnicalName = foundTechnicalName,
                             Url = foundServiceUrl,
                         });
                     }
@@ -79,6 +79,7 @@ namespace DowndetectorMCP.API
             return new ServiceStatusResult();
         }
 
+        #region Private Methods
         private string SearchUrl(string serviceName)
         {
             return $"{this.BaseUrl}/search/?q={serviceName.Replace(" ", "+")}";
@@ -105,5 +106,6 @@ namespace DowndetectorMCP.API
             // Ex: /statut/microsoft-365/ -> microsoft-365
             return segments.Length > 0 ? segments[^1] : string.Empty;
         }
+        #endregion
     }
 }
