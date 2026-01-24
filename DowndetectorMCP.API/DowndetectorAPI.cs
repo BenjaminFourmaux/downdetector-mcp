@@ -2,16 +2,20 @@
 using DowndetectorMCP.API.Models;
 using Microsoft.Playwright;
 using System;
+using System.Globalization;
 
 namespace DowndetectorMCP.API
 {
     public class DowndetectorAPI
     {
         public string BaseUrl { get; set; }
+        public string CountryCode { get; set; }
+
         private const string UserAgent = "Mozilla/5.0 (Windows NT 11.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36";
 
         public DowndetectorAPI(string countryCode = "us")
         {
+            this.CountryCode = countryCode.ToUpper();
             this.BaseUrl = Utils.ApiUrl.GetUrlByCountryCode(countryCode.ToUpper());
         }
 
