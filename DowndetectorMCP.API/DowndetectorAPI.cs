@@ -1,6 +1,7 @@
 ﻿using DowndetectorMCP.API.Exceptions;
 using DowndetectorMCP.API.Models;
 using Microsoft.Playwright;
+using System;
 
 namespace DowndetectorMCP.API
 {
@@ -31,7 +32,21 @@ namespace DowndetectorMCP.API
             // Navigate to the search url
             await page.GotoAsync(searchUrl, new PageGotoOptions(){ WaitUntil = WaitUntilState.Load });
 
+#if DEBUG
             await page.ScreenshotAsync(new() { Path = "C:\\tmp\\screenshot.png" });
+#endif
+            // Check if blocked by Cloudflare
+            if (await TryBypassClouflare(page))
+            {
+                await CloseBrowser(browser, page);
+                throw new RateLimitException();
+            }
+
+            var searchResult = new SearchServiceResult
+            {
+                SearchWord = serviceName,
+                Results = new List<SearchResultItem>(),
+            };
 
             // Case : Search results page, no redirection in service page
             if (page.Url == searchUrl || page.Url.StartsWith(searchUrl))
@@ -41,13 +56,10 @@ namespace DowndetectorMCP.API
 
                 // If no results found, throw exception
                 if (cards.Count == 0)
-                    throw new NoResultException(serviceName);
-
-                var searchResult = new SearchServiceResult
                 {
-                    SearchWord = serviceName,
-                    Results = new List<SearchResultItem>(),
-                };
+                    await CloseBrowser(browser, page);
+                    throw new NoResultException(serviceName);
+                }
 
                 // Extract results
                 foreach (var card in cards)
@@ -55,7 +67,7 @@ namespace DowndetectorMCP.API
                     var link = card.Locator("a");
                     var foundServiceName = await card.Locator("a .caption h5").InnerTextAsync();
                     var foundServiceUrl = CleanUrl(this.BaseUrl + (await link.GetAttributeAsync("href") ?? string.Empty));
-                    var foundTechnicalName = CleanTechnicalName(foundServiceUrl);
+                    var foundTechnicalName = ExtractTechnicalServiceNameFromURL(foundServiceUrl);
 
                     if (foundServiceName != null && link != null)
                     {
@@ -68,10 +80,25 @@ namespace DowndetectorMCP.API
                     }
                 }
 
+                await CloseBrowser(browser, page);
                 return searchResult;
             }
+            else // Redirect onto the service status page
+            {
+                var cleanUrl = CleanUrl(page.Url);
+                var foundTechnicalName = ExtractTechnicalServiceNameFromURL(cleanUrl);
+                var foundServiceName = await page.Locator(".breadcrumb-item.active").InnerTextAsync();
 
-            return new SearchServiceResult();
+                searchResult.Results.Add(new SearchResultItem
+                {
+                    ServiceName = foundServiceName.Trim(),
+                    TechnicalName = foundTechnicalName,
+                    Url = cleanUrl,
+                });
+
+                await CloseBrowser(browser, page);
+                return searchResult;
+            }
         }
 
         public async Task<ServiceStatusResult> GetServiceStatus(string technicalName)
@@ -85,6 +112,16 @@ namespace DowndetectorMCP.API
             return $"{this.BaseUrl}/search/?q={serviceName.Replace(" ", "+")}";
         }
 
+        /// <summary>
+        /// Remove the '?_gl' URL parameter in the Downdetector URLs
+        /// </summary>
+        /// <param name="url"></param>
+        /// <returns></returns>
+        /// <remarks>
+        /// input : https://downdetector.fr/statut/youtube/?_gl=1*H1Z1....
+        /// <br/>
+        /// output : https://downdetector.fr/statut/youtube/
+        /// </remarks>
         private static string CleanUrl(string url)
         {
             if (string.IsNullOrWhiteSpace(url))
@@ -94,7 +131,7 @@ namespace DowndetectorMCP.API
             return $"{uri.Scheme}://{uri.Host}{uri.AbsolutePath}";
         }
 
-        private static string CleanTechnicalName(string url)
+        private static string ExtractTechnicalServiceNameFromURL(string url)
         {
             if (string.IsNullOrWhiteSpace(url))
                 return string.Empty;
@@ -102,9 +139,51 @@ namespace DowndetectorMCP.API
             var uri = new Uri(url);
             var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
 
-            // The service technical name is usually the last segment before the final slash
-            // Ex: /statut/microsoft-365/ -> microsoft-365
             return segments.Length > 0 ? segments[^1] : string.Empty;
+        }
+
+        private static async Task CloseBrowser(IBrowser browser, IPage page)
+        {
+            await page.CloseAsync();
+            await browser.CloseAsync();
+        }
+
+        private static async Task<bool> IsCloudflare(IPage page)
+        {
+            try
+            {
+                var cloudflareLink = page.Locator("a:has-text('Cloudflare')");
+                var count = await cloudflareLink.CountAsync();
+                
+                if (count == 0)
+                    return false;
+                    
+                var href = await cloudflareLink.First.GetAttributeAsync("href");
+                return href != null && href.StartsWith("https://www.cloudflare.com");
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static async Task<bool> TryBypassClouflare(IPage page)
+        {
+            if (await IsCloudflare(page))
+            {
+                await page.WaitForTimeoutAsync(3000);
+
+                // Your are a humman, trust me and click on the checkbox
+                //await page.GetByRole(AriaRole.Checkbox).ClickAsync();
+                //await page.WaitForTimeoutAsync(1000);
+
+                if (await IsCloudflare(page)) 
+                {
+                    return true;
+                }
+                return false;
+            }
+            return false;
         }
         #endregion
     }

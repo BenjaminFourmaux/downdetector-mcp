@@ -1,7 +1,7 @@
 ### Variables
 @port = 5057
 @baseUrl = http://localhost:{{port}}
-@serviceName = microsoft
+@serviceName = openai
 @countryCode = fr
 
 ###

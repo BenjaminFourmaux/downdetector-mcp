@@ -28,6 +28,10 @@ namespace DowdetectorMCP.Server.Tools
             {
                 return ex.Message;
             }
+            catch (RateLimitException ex)
+            {
+                return ex.Message;
+            }
         }
     }
 }
