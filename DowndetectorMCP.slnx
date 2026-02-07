@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/Éléments de solution/">
+    <File Path="Dockerfile" />
     <File Path="test.http" />
   </Folder>
   <Project Path="DowdetectorMCP.Server/DowdetectorMCP.Server.csproj" Id="82a9b76d-f97c-47e9-bf0a-8808ef1bda63" />
