@@ -217,7 +217,7 @@ namespace DowndetectorMCP.API
 
         private string ServiceStatusUrl(string technicalName)
         {
-            return $"{this.BaseUrl}/status/{technicalName}/";
+            return $"{this.BaseUrl}/status/{technicalName.ToLower()}/";
         }
 
         /// <summary>
