@@ -81,10 +81,57 @@ LastReportData:
 
 ### Docker (recommended)
 
-> [!NOTE]
-> Docker Hub public images coming soon 
+#### From Docker Hub
+
+```bash
+docker run -d -p 8080:8080 --name downdetector-mcp benjaminfourmauxb/downdetector-mcp:latest
+```
+
+#### Build from source
+
+```bash
+docker build -t downdetector-mcp .
+```
+
+#### Run the container
+
+```bash
+docker run -d -p 8080:8080 --name downdetector-mcp downdetector-mcp
+```
+
+The server will be available on `http://localhost:8080`.
 
 ### From source code
+
+#### Prerequisites
+
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- [PowerShell](https://docs.microsoft.com/powershell/scripting/install/installing-powershell) (required by Playwright CLI)
+
+#### Build
+
+```bash
+dotnet build
+```
+
+#### Install Playwright Chromium
+
+After building, install the Chromium browser used by Playwright :
+
+```bash
+pwsh DowdetectorMCP.Server/bin/Debug/net10.0/playwright.ps1 install chromium
+```
+
+> [!NOTE]
+> This command also installs the required OS-level dependencies for Chromium. You only need to run it once (or after a Playwright version update).
+
+#### Run
+
+```bash
+dotnet run --project DowdetectorMCP.Server
+```
+
+The server starts on `http://localhost:5057` by default.
 
 ## How it works 🏗
 
