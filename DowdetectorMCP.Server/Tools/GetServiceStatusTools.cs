@@ -1,4 +1,5 @@
 ﻿using DowndetectorMCP.API;
+using DowndetectorMCP.API.Exceptions;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 
@@ -12,13 +13,25 @@ namespace DowdetectorMCP.Server.Tools
         [Description("Get the status informations of an online service")]
         public static async Task<string> GetServiceStatus(
             [Description("The technical service name")] string technicalServiceName,
-            [Description("The country in which we want to know the status of the service")] string country)
+            [Description("The country in which we want to know the status of the service")] string country,
+            [Description("Include or not the last 24 hours status series (4 points per hour, total 96). By default, false")] bool includeHistoricalReportData = false)
         {
-            var downdetectorAPI = new DowndetectorAPI(country);
+            try
+            {
+                var downdetectorAPI = new DowndetectorAPI(country);
 
-            var service = await downdetectorAPI.GetServiceStatus(technicalServiceName);
+                var serviceData = await downdetectorAPI.GetServiceStatus(technicalServiceName, includeHistoricalReportData);
 
-            return "google-gemini";
+                return serviceData.ToToon();
+            }
+            catch (DataNotFoundException ex)
+            {
+                return ex.Message;
+            }
+            catch (RateLimitException ex)
+            {
+                return ex.Message;
+            }
         }
     }
 }

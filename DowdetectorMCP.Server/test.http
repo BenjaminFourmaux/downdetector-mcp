@@ -1,8 +1,9 @@
 ### Variables
 @port = 5057
 @baseUrl = http://localhost:{{port}}
-@serviceName = openai
-@countryCode = fr
+@serviceName = xbox-live
+@countryCode = us
+@includeHistoric = false
 
 ###
 
@@ -80,7 +81,8 @@ Accept: application/json, text/event-stream
     "name": "get_service_status",
     "arguments": {
       "technicalServiceName": "{{serviceName}}",
-      "country": "{{countryCode}}"
+      "country": "{{countryCode}}",
+      "includeHistoricalReportData": {{includeHistoric}}
     }
   }
 }

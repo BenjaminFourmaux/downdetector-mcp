@@ -105,15 +105,114 @@ namespace DowndetectorMCP.API
             }
         }
 
-        public async Task<ServiceStatusResult> GetServiceStatus(string technicalName)
+
+        public async Task<ServiceStatusResult> GetServiceStatus(string technicalName, bool includeHistoricalReportData)
         {
-            return new ServiceStatusResult();
+            // Init Playwright and Browser
+            using var playwright = await Playwright.CreateAsync();
+
+            await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
+            {
+                Headless = true,
+            });
+            var page = await browser.NewPageAsync(new BrowserNewPageOptions { UserAgent = UserAgent });
+
+            // Get the service status page url according to the service name and country
+            var statusPageUrl = this.ServiceStatusUrl(technicalName);
+
+            // Navigate to the status page url
+            await page.GotoAsync(statusPageUrl, new PageGotoOptions() { WaitUntil = WaitUntilState.Load });
+
+#if DEBUG
+            await page.ScreenshotAsync(new() { Path = "C:\\tmp\\screenshot.png" });
+#endif
+
+            // Check if blocked by Cloudflare
+            if (await TryBypassClouflare(page))
+            {
+                await CloseBrowser(browser, page);
+                throw new RateLimitException();
+            }
+
+            // TODO: check if the page is not a 404 page
+
+            var serviceStatusResult = new ServiceStatusResult();
+
+            // Extract JS data
+            var jsDataObj = await page.EvaluateAsync<object>(@"
+                () => {
+                    if (window.DD && window.DD.currentServiceProperties) {
+                        return window.DD.currentServiceProperties;
+                    }
+                    return null;
+                }
+            ");
+
+            // deserialize the JS data into a CurrentServiceProperties model
+            var jsonString = System.Text.Json.JsonSerializer.Serialize(jsDataObj);
+            var jsData = System.Text.Json.JsonSerializer.Deserialize<CurrentServiceProperties>(jsonString);
+
+            if (jsData == null)
+            {
+                await CloseBrowser(browser, page);
+                throw new DataNotFoundException(technicalName);
+            }
+
+            serviceStatusResult.ServiceName = jsData.Company;
+            serviceStatusResult.Status = ParseCompanyStatusToEnum(jsData.Status);
+
+            // Get Reports data (baseline and current reports)
+            var historicalReportData = new List<ChartPoint>();
+
+            for (var pointIndex = 0; pointIndex < jsData.Series.Baseline.Data.Count; pointIndex++)
+            {
+                var baselinePoint = jsData.Series.Baseline.Data[pointIndex];
+                var reportPoint = jsData.Series.Reports.Data[pointIndex];
+
+                historicalReportData.Add(new ChartPoint
+                {
+                    Time = DateTime.ParseExact(reportPoint.X, "yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture),
+                    Report = reportPoint.Y,
+                    Baseline = baselinePoint.Y,
+                });
+            }
+
+            if(includeHistoricalReportData)
+                serviceStatusResult.ReportData = historicalReportData;
+
+            serviceStatusResult.LastReportData = historicalReportData.Last();
+
+
+            // Get most reported issues
+            var mostReportedIssues = new Dictionary<string, int>();
+            var indicatorChartPercentages = await page.Locator(".indicatorChart_percentage").AllAsync();
+            var indicatorChartNames = await page.Locator(".indicatorChart_name").AllAsync();
+
+            for (var i = 0; i < indicatorChartNames.Count; i++)
+            {
+                var issueName = await indicatorChartNames[i].InnerTextAsync();
+                var issuePercentageText = await indicatorChartPercentages[i].InnerTextAsync();
+
+                if (int.TryParse(issuePercentageText.TrimEnd('%'), out var issuePercentage))
+                {
+                    mostReportedIssues[issueName.Trim().Replace(" $gt; ", ">")] = issuePercentage;
+                }
+            }
+
+            serviceStatusResult.MostReportedIssues = mostReportedIssues;
+
+            return serviceStatusResult;
         }
 
         #region Private Methods
         private string SearchUrl(string serviceName)
         {
             return $"{this.BaseUrl}/search/?q={serviceName.Replace(" ", "+")}";
+        }
+
+        private string ServiceStatusUrl(string technicalName)
+        {
+            return $"{this.BaseUrl}/status/{technicalName}/";
         }
 
         /// <summary>
@@ -144,6 +243,17 @@ namespace DowndetectorMCP.API
             var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
 
             return segments.Length > 0 ? segments[^1] : string.Empty;
+        }
+
+        private static ServiceStatus ParseCompanyStatusToEnum(string status)
+        {
+            return status switch
+            {
+                "success" => ServiceStatus.SUCCESS,
+                "warning" => ServiceStatus.WARNING,
+                "danger" => ServiceStatus.DANGER,
+                _ => ServiceStatus.SUCCESS
+            };
         }
 
         private static async Task CloseBrowser(IBrowser browser, IPage page)
@@ -188,7 +298,7 @@ namespace DowndetectorMCP.API
                 return false;
             }
             return false;
-        }
+        } 
         #endregion
     }
 }
