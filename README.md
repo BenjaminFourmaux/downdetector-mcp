@@ -62,18 +62,18 @@ Tool calling with params :
 ```toon
 ServiceName: Google Gemini
 Status: WARNING
-MostReportedIssues[3]{reason,percentage}:
+MostReportedIssues[3]{Issue,Percentage}:
   AI Generation,57
   Website,24
   App,20
-ReportData[24]{Time,Reports,Baseline}:
+ReportData[96]{Time,Report,Baseline}:
   14:05 07/02/2026,8,2
   15:05 07/02/2026,4,2
   16:05 07/02/2026,3,1
   ...
 LastReportData:
   Time: 14:05 08/02/2026
-  Reports: 25
+  Report: 25
   Baseline: 5
 ```
 

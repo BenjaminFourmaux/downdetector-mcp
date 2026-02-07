@@ -1,7 +1,6 @@
 ﻿using DowndetectorMCP.API.Exceptions;
 using DowndetectorMCP.API.Models;
 using Microsoft.Playwright;
-using System;
 using System.Globalization;
 
 namespace DowndetectorMCP.API
@@ -189,7 +188,7 @@ namespace DowndetectorMCP.API
 
 
             // Get most reported issues
-            var mostReportedIssues = new Dictionary<string, int>();
+            var mostReportedIssues = new List<MostReportedIssue>();
             var indicatorChartPercentages = await page.Locator(".indicatorChart_percentage").AllAsync();
             var indicatorChartNames = await page.Locator(".indicatorChart_name").AllAsync();
 
@@ -200,7 +199,11 @@ namespace DowndetectorMCP.API
 
                 if (int.TryParse(issuePercentageText.TrimEnd('%'), out var issuePercentage))
                 {
-                    mostReportedIssues[issueName.Trim().Replace(" $gt; ", ">")] = issuePercentage;
+                    mostReportedIssues.Add(new MostReportedIssue
+                    {
+                        Issue = issueName.Trim(),
+                        Percentage = issuePercentage,
+                    });
                 }
             }
 

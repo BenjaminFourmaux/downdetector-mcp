@@ -6,7 +6,7 @@ namespace DowndetectorMCP.API.Models
     {
         public string ServiceName { get; set; } = string.Empty;
         public ServiceStatus Status { get; set; } = ServiceStatus.SUCCESS;
-        public Dictionary<string, int> MostReportedIssues { get; set; } = new();
+        public List<MostReportedIssue> MostReportedIssues { get; set; } = new();
         public List<ChartPoint> ReportData { get; set; } = new();
         public ChartPoint LastReportData { get; set; } = new();
 
@@ -26,6 +26,12 @@ namespace DowndetectorMCP.API.Models
         SUCCESS,
         WARNING,
         DANGER
+    }
+
+    public class MostReportedIssue
+    {
+        public string Issue { get; set; } = string.Empty;
+        public int Percentage { get; set; }
     }
 
     public class ChartPoint
