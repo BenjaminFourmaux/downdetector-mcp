@@ -24,6 +24,10 @@ namespace DowdetectorMCP.Server.Tools
 
                 return serviceData.ToToon();
             }
+            catch (ServiceNotFoundException ex)
+            {
+                return ex.Message;
+            }
             catch (DataNotFoundException ex)
             {
                 return ex.Message;

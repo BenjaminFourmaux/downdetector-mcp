@@ -121,11 +121,18 @@ namespace DowndetectorMCP.API
             var statusPageUrl = this.ServiceStatusUrl(technicalName);
 
             // Navigate to the status page url
-            await page.GotoAsync(statusPageUrl, new PageGotoOptions() { WaitUntil = WaitUntilState.Load });
+            var response = await page.GotoAsync(statusPageUrl, new PageGotoOptions() { WaitUntil = WaitUntilState.Load });
 
 #if DEBUG
             await page.ScreenshotAsync(new() { Path = "C:\\tmp\\screenshot.png" });
 #endif
+
+            // Check if on the 404 page
+            if(response != null && response.Status == 404)
+            {
+                await CloseBrowser(browser, page);
+                throw new ServiceNotFoundException(technicalName);
+            }
 
             // Check if blocked by Cloudflare
             if (await TryBypassClouflare(page))
@@ -133,8 +140,6 @@ namespace DowndetectorMCP.API
                 await CloseBrowser(browser, page);
                 throw new RateLimitException();
             }
-
-            // TODO: check if the page is not a 404 page
 
             var serviceStatusResult = new ServiceStatusResult();
 
