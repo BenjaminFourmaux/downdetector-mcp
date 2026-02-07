@@ -60,7 +60,7 @@ namespace DowndetectorMCP.API.Utils
                 {
                     var collection = (IEnumerable)value;
                     var items = collection.Cast<object>().ToList();
-                    
+
                     if (items.Count == 0) continue;
 
                     var firstItem = items.First();
@@ -76,9 +76,9 @@ namespace DowndetectorMCP.API.Utils
                     {
                         var itemProps = itemType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
                         var propNames = string.Join(",", itemProps.Select(p => p.Name));
-                        
+
                         sb.AppendLine($"{indentStr}{prop.Name}[{items.Count}]{{{propNames}}}:");
-                        
+
                         foreach (var item in items)
                         {
                             var values = new List<string>();
@@ -88,6 +88,18 @@ namespace DowndetectorMCP.API.Utils
                                 values.Add(FormatValue(itemValue));
                             }
                             sb.AppendLine($"{indentStr}  {string.Join(",", values)}");
+                        }
+                    }
+                    else
+                    {
+                        var dict = (IDictionary)value;
+                        if (dict.Count == 0) continue;
+
+                        sb.AppendLine($"{indentStr}{prop.Name}:");
+                        foreach (DictionaryEntry entry in dict)
+                        {
+                            sb.AppendLine($"{indentStr}  {entry.Key}: {FormatValue(entry.Value)}");
+
                         }
                     }
                 }
