@@ -1,5 +1,5 @@
 ### Variables
-@port = 5057
+@port = 5000
 @baseUrl = http://localhost:{{port}}
 @serviceName = googlegemini
 @countryCode = us
