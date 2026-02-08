@@ -4,6 +4,8 @@
 ![](https://img.shields.io/badge/Down-detector-website?logo=downdetector&logoColor=red&color=red)
 ![](https://badge.mcpx.dev?type=server 'MCP Server')
 
+![](hero-banner.png)
+
 HTTP based [MCP](https://modelcontextprotocol.io/) server to get online services status via [Downdector](https://downdetector.com/).
 
 Providing data on the status of online services for agentic AI applications.
