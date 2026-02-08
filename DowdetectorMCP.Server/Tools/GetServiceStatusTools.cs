@@ -6,11 +6,11 @@ using System.ComponentModel;
 namespace DowdetectorMCP.Server.Tools
 {
     [McpServerToolType]
-    [Description("Get the status informations of an online service")]
+    [Description("Get comprehensive status information for an online service, including current status, report counts compared to baseline, 24-hour historical data, and most reported outage causes")]
     public static class GetServiceStatusTools
     {
         [McpServerTool]
-        [Description("Get the status informations of an online service")]
+        [Description("Get comprehensive status information for an online service, including current status, report counts compared to baseline, 24-hour historical data, and most reported outage causes")]
         public static async Task<string> GetServiceStatus(
             [Description("The technical service name")] string technicalServiceName,
             [Description("The country in which we want to know the status of the service")] string country,
