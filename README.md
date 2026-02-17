@@ -3,7 +3,7 @@
 ![](https://img.shields.io/badge/10.0-mode?logo=dotnet&logoColor=white&label=C%23&color=darkgreen)
 ![](https://img.shields.io/badge/Down-detector-website?logo=downdetector&logoColor=red&color=red)
 ![](https://badge.mcpx.dev?type=server 'MCP Server')
-![](https://img.shields.io/badge/Docker-Image-badge?logo=docker&color=blue&link=https%3A%2F%2Fhub.docker.com%2Frepository%2Fdocker%2Fbenjaminfourmauxb%2Fdowndetector-mcp)
+[![Static Badge](https://img.shields.io/badge/Docker-Image-badge?logo=docker&color=blue)](https://hub.docker.com/repository/docker/benjaminfourmauxb/downdetector-mcp)
 
 
 
