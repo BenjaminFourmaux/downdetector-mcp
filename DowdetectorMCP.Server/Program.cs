@@ -12,7 +12,9 @@ builder.Services.AddSingleton<IServiceSearchCache>(sp =>
     ));
 builder.Services.AddMcpServer()
     .WithHttpTransport()
-    .WithToolsFromAssembly();
+    .WithToolsFromAssembly()
+    .WithPromptsFromAssembly()
+    .WithResourcesFromAssembly();
 
 var app = builder.Build();
 
