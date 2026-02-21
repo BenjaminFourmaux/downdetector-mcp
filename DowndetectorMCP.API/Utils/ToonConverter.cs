@@ -136,7 +136,7 @@ namespace DowndetectorMCP.API.Utils
             return value switch
             {
                 bool b => b.ToString().ToLower(),
-                DateTime dt => dt.ToString("yyyy-MM-ddTHH:mm:ss"),
+                DateTime dt => dt.ToString("dd-MM-yyyyTHH:mm:ss"),
                 string s => s,
                 _ => value.ToString() ?? string.Empty
             };

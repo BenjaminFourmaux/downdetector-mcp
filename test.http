@@ -1,5 +1,5 @@
 ### Variables
-@port = 5000
+@port = 5057
 @baseUrl = http://localhost:{{port}}
 @serviceName = googlegemini
 @countryCode = us
@@ -71,7 +71,7 @@ Content-Type: application/json
 Accept: application/json, text/event-stream
 {
   "jsonrpc": "2.0",
-  "id": 5,
+  "id": 4,
   "method": "tools/call",
   "params": {
     "name": "get_service_status",
@@ -80,5 +80,61 @@ Accept: application/json, text/event-stream
       "country": "{{countryCode}}",
       "includeHistoricalReportData": {{includeHistoric}}
     }
+  }
+}
+
+###
+
+### MCP - List Available Prompts
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "method": "prompts/list",
+  "params": {}
+}
+
+###
+
+### MCP - Get the Prompt
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+{
+  "jsonrpc": "2.0",
+  "id": 6,
+  "method": "prompts/get",
+  "params": {
+    "name": "ask_service_satatus"
+  }
+}
+
+###
+
+### MCP - List Available Resources
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "method": "resources/list",
+  "params": {}
+}
+
+###
+
+### MCP - List Available Resources
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+{
+  "jsonrpc": "2.0",
+  "id": 8,
+  "method": "resources/get",
+  "params": {
+    "name": "object_description_get_service_status"
   }
 }
