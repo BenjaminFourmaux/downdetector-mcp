@@ -1,7 +1,10 @@
 ﻿using DowndetectorMCP.API.Exceptions;
 using DowndetectorMCP.API.Models;
+using DowndetectorMCP.API.Utils;
 using Microsoft.Playwright;
 using System.Globalization;
+using System.Net;
+using System.Text.Json;
 
 namespace DowndetectorMCP.API
 {
@@ -15,7 +18,7 @@ namespace DowndetectorMCP.API
         public DowndetectorAPI(string countryCode = "us")
         {
             this.CountryCode = countryCode.ToUpper();
-            this.BaseUrl = Utils.ApiUrl.GetUrlByCountryCode(countryCode.ToUpper());
+            this.BaseUrl = ApiUrl.GetUrlByCountryCode(countryCode.ToUpper());
         }
 
         public async Task<SearchServiceResult> SearchService(string serviceName)
@@ -33,11 +36,17 @@ namespace DowndetectorMCP.API
             var searchUrl = this.SearchUrl(serviceName);
 
             // Navigate to the search url
-            await page.GotoAsync(searchUrl, new PageGotoOptions(){ WaitUntil = WaitUntilState.Load });
+            var response = await page.GotoAsync(searchUrl, new PageGotoOptions(){ WaitUntil = WaitUntilState.Load });
 
 #if DEBUG
             await page.ScreenshotAsync(new() { Path = "C:\\tmp\\screenshot.png" });
 #endif
+            // Check if 404 that mean we are on the new website
+            if (response != null && response.Status == 404)
+            {
+                return await SearchFromAPI(page, serviceName);
+            }
+
             // Check if blocked by Cloudflare
             if (await TryBypassClouflare(page))
             {
@@ -210,6 +219,44 @@ namespace DowndetectorMCP.API
             serviceStatusResult.MostReportedIssues = mostReportedIssues;
 
             return serviceStatusResult;
+        }
+
+        public async Task<SearchServiceResult> SearchFromAPI(IPage page, string searchWord)
+        {
+            var local = $"{this.CountryCode.ToLower()}-{this.CountryCode.ToUpper()}";
+
+            // Call the API to the /search endpoint
+            /*var response = await this.httpClient.GetAsync(ApiUrl.Url + $"/search/?q={Uri.EscapeDataString(searchWord)}&local={local}");
+
+            response.EnsureSuccessStatusCode();
+
+            var jsonContent = await response.Content.ReadAsStringAsync();*/
+
+            // Note: I cannot get data from Downdetector API via HttpClient (passing cookies and user-agent not working)
+            // so we need to goto the API endpoint with Playwright browser and extract row data (d'où le IPage en paramètre)
+
+            var response = await page.GotoAsync(ApiUrl.Url + $"/search/?q={Uri.EscapeDataString(searchWord)}&local={local}");
+
+            var jsonContent = await response.TextAsync();
+
+            var data = JsonSerializer.Deserialize<List<SearchResultType>>(jsonContent);
+
+            // Browse result and create a SearchServiceResutlt
+            var searchServiceResult = new SearchServiceResult();
+
+            searchServiceResult.SearchWord = searchWord;
+
+            foreach (var item in data)
+            {
+                searchServiceResult.Results.Add(new SearchResultItem
+                {
+                    ServiceName = item.Company.Name,
+                    TechnicalName = item.Company.Slug,
+                    Url = this.BaseUrl + "/status/" + item.Company.Slug
+                });
+            }
+
+            return searchServiceResult;
         }
 
         #region Private Methods

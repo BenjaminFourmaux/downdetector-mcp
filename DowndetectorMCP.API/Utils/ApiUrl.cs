@@ -2,7 +2,8 @@ namespace DowndetectorMCP.API.Utils
 {
     internal class ApiUrl
     {
-        private const string DefaultUrl = "https://downdetector.com";
+        public const string DefaultUrl = "https://downdetector.com";
+        public const string Url = "https://downdetector.com/api";
 
         private static readonly Dictionary<string, string> CountryUrlMap = new(StringComparer.OrdinalIgnoreCase)
         {
