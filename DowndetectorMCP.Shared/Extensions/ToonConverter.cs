@@ -2,7 +2,7 @@ using System.Collections;
 using System.Reflection;
 using System.Text;
 
-namespace DowndetectorMCP.API.Utils
+namespace DowndetectorMCP.Shared.Extensions
 {
     /// <summary>
     /// Converts objects to Toon format string representation.

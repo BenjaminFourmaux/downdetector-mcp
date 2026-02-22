@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using DowndetectorMCP.API.Utils;
+﻿using DowndetectorMCP.Shared.Extensions;
 
 namespace DowndetectorMCP.API.Models
 {
