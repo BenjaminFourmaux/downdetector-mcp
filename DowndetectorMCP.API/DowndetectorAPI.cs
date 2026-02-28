@@ -1,7 +1,8 @@
 ﻿using DowndetectorMCP.API.Exceptions;
 using DowndetectorMCP.API.Models;
+using DowndetectorMCP.API.Utils;
 using Microsoft.Playwright;
-using System.Globalization;
+using System.Text.Json;
 
 namespace DowndetectorMCP.API
 {
@@ -15,7 +16,7 @@ namespace DowndetectorMCP.API
         public DowndetectorAPI(string countryCode = "us")
         {
             this.CountryCode = countryCode.ToUpper();
-            this.BaseUrl = Utils.ApiUrl.GetUrlByCountryCode(countryCode.ToUpper());
+            this.BaseUrl = ApiUrl.GetUrlByCountryCode(countryCode.ToUpper());
         }
 
         public async Task<SearchServiceResult> SearchService(string serviceName)
@@ -33,11 +34,18 @@ namespace DowndetectorMCP.API
             var searchUrl = this.SearchUrl(serviceName);
 
             // Navigate to the search url
-            await page.GotoAsync(searchUrl, new PageGotoOptions(){ WaitUntil = WaitUntilState.Load });
+            var response = await page.GotoAsync(searchUrl, new PageGotoOptions(){ WaitUntil = WaitUntilState.Load });
 
 #if DEBUG
             await page.ScreenshotAsync(new() { Path = "C:\\tmp\\screenshot.png" });
 #endif
+            // Check if 404 that mean we are on the new website
+            if (response != null && response.Status == 404)
+            {
+                var searchApiResult = await SearchFromAPI(page, serviceName);
+                return ConvertSearchResultToModel(searchApiResult, this.BaseUrl, serviceName);
+            }
+
             // Check if blocked by Cloudflare
             if (await TryBypassClouflare(page))
             {
@@ -105,7 +113,7 @@ namespace DowndetectorMCP.API
         }
 
 
-        public async Task<ServiceStatusResult> GetServiceStatus(string technicalName, bool includeHistoricalReportData)
+        public async Task<ServiceStatusResult> GetServiceStatus(string serviceName, string slug, bool includeHistoricalReportData)
         {
             // Init Playwright and Browser
             using var playwright = await Playwright.CreateAsync();
@@ -116,22 +124,12 @@ namespace DowndetectorMCP.API
             });
             var page = await browser.NewPageAsync(new BrowserNewPageOptions { UserAgent = UserAgent });
 
-            // Get the service status page url according to the service name and country
-            var statusPageUrl = this.ServiceStatusUrl(technicalName);
-
-            // Navigate to the status page url
-            var response = await page.GotoAsync(statusPageUrl, new PageGotoOptions() { WaitUntil = WaitUntilState.Load });
+            // Navigate to the home page
+            var response = await page.GotoAsync(this.BaseUrl, new PageGotoOptions() { WaitUntil = WaitUntilState.Load });
 
 #if DEBUG
             await page.ScreenshotAsync(new() { Path = "C:\\tmp\\screenshot.png" });
 #endif
-
-            // Check if on the 404 page
-            if(response != null && response.Status == 404)
-            {
-                await CloseBrowser(browser, page);
-                throw new ServiceNotFoundException(technicalName);
-            }
 
             // Check if blocked by Cloudflare
             if (await TryBypassClouflare(page))
@@ -140,77 +138,49 @@ namespace DowndetectorMCP.API
                 throw new RateLimitException();
             }
 
-            var serviceStatusResult = new ServiceStatusResult();
+            // Extract status from search API query
+            var results = await SearchFromAPI(page, serviceName);
 
-            // Extract JS data
-            var jsDataObj = await page.EvaluateAsync<object>(@"
-                () => {
-                    if (window.DD && window.DD.currentServiceProperties) {
-                        return window.DD.currentServiceProperties;
-                    }
-                    return null;
-                }
-            ");
+            var serviceResult = results.FirstOrDefault(r => r.Company.Slug == slug);
 
-            // deserialize the JS data into a CurrentServiceProperties model
-            var jsonString = System.Text.Json.JsonSerializer.Serialize(jsDataObj);
-            var jsData = System.Text.Json.JsonSerializer.Deserialize<CurrentServiceProperties>(jsonString);
-
-            if (jsData == null)
+            if (serviceResult != null)
             {
-                await CloseBrowser(browser, page);
-                throw new DataNotFoundException(technicalName);
+                var serviceStatus = new ServiceStatusResult();
+
+                serviceStatus.ServiceName = serviceName;
+                serviceStatus.Status = ParseCompanyStatusToEnum(serviceResult.Company.Stats.Status);
+
+                return serviceStatus;
             }
-
-            serviceStatusResult.ServiceName = jsData.Company;
-            serviceStatusResult.Status = ParseCompanyStatusToEnum(jsData.Status);
-
-            // Get Reports data (baseline and current reports)
-            var historicalReportData = new List<ChartPoint>();
-
-            for (var pointIndex = 0; pointIndex < jsData.Series.Baseline.Data.Count; pointIndex++)
+            else
             {
-                var baselinePoint = jsData.Series.Baseline.Data[pointIndex];
-                var reportPoint = jsData.Series.Reports.Data[pointIndex];
-
-                historicalReportData.Add(new ChartPoint
-                {
-                    Time = DateTime.ParseExact(reportPoint.X, "yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture),
-                    Report = reportPoint.Y,
-                    Baseline = baselinePoint.Y,
-                });
+                throw new DataNotFoundException(slug);
             }
-
-            if(includeHistoricalReportData)
-                serviceStatusResult.ReportData = historicalReportData;
-
-            serviceStatusResult.LastReportData = historicalReportData.Last();
-
-
-            // Get most reported issues
-            var mostReportedIssues = new List<MostReportedIssue>();
-            var indicatorChartPercentages = await page.Locator(".indicatorChart_percentage").AllAsync();
-            var indicatorChartNames = await page.Locator(".indicatorChart_name").AllAsync();
-
-            for (var i = 0; i < indicatorChartNames.Count; i++)
-            {
-                var issueName = await indicatorChartNames[i].InnerTextAsync();
-                var issuePercentageText = await indicatorChartPercentages[i].InnerTextAsync();
-
-                if (int.TryParse(issuePercentageText.TrimEnd('%'), out var issuePercentage))
-                {
-                    mostReportedIssues.Add(new MostReportedIssue
-                    {
-                        Issue = issueName.Trim(),
-                        Percentage = issuePercentage,
-                    });
-                }
-            }
-
-            serviceStatusResult.MostReportedIssues = mostReportedIssues;
-
-            return serviceStatusResult;
         }
+
+        public async Task<List<SearchResultType>> SearchFromAPI(IPage page, string searchWord)
+        {
+            var local = $"{this.CountryCode.ToLower()}-{this.CountryCode.ToUpper()}";
+
+            // Call the API to the /search endpoint
+            /*var response = await this.httpClient.GetAsync(ApiUrl.Url + $"/search/?q={Uri.EscapeDataString(searchWord)}&local={local}");
+
+            response.EnsureSuccessStatusCode();
+
+            var jsonContent = await response.Content.ReadAsStringAsync();*/
+
+            // Note: I cannot get data from Downdetector API via HttpClient (passing cookies and user-agent not working)
+            // so we need to goto the API endpoint with Playwright browser and extract row data (d'où le IPage en paramètre)
+
+            var response = await page.GotoAsync(ApiUrl.Url + $"/search/?q={Uri.EscapeDataString(searchWord)}&local={local}");
+
+            var jsonContent = await response.TextAsync();
+
+            var data = JsonSerializer.Deserialize<List<SearchResultType>>(jsonContent);
+
+            return data ?? new List<SearchResultType>();
+        }
+
 
         #region Private Methods
         private string SearchUrl(string serviceName)
@@ -251,6 +221,25 @@ namespace DowndetectorMCP.API
             var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
 
             return segments.Length > 0 ? segments[^1] : string.Empty;
+        }
+
+        private static SearchServiceResult ConvertSearchResultToModel(List<SearchResultType> data, string url, string searchWord)
+        {
+            var searchServiceResult = new SearchServiceResult();
+
+            searchServiceResult.SearchWord = searchWord;
+
+            foreach (var item in data)
+            {
+                searchServiceResult.Results.Add(new SearchResultItem
+                {
+                    ServiceName = item.Company.Name,
+                    TechnicalName = item.Company.Slug,
+                    Url = url + "/status/" + item.Company.Slug,
+                    Category = item.Company.Category.Slug.Replace('-', ' ')
+                });
+            }
+            return searchServiceResult;
         }
 
         private static ServiceStatus ParseCompanyStatusToEnum(string status)

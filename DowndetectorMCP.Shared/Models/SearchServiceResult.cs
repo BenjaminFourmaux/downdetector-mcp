@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using DowndetectorMCP.API.Utils;
+﻿using DowndetectorMCP.Shared.Extensions;
 
 namespace DowndetectorMCP.API.Models
 {
@@ -27,5 +24,6 @@ namespace DowndetectorMCP.API.Models
         public string ServiceName { get; set; } = string.Empty;
         public string TechnicalName { get; set; } = string.Empty;
         public string Url { get; set; } = string.Empty;
+        public string Category {  get; set; } = string.Empty;
     }
 }

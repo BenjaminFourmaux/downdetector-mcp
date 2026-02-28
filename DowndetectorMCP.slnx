@@ -5,4 +5,5 @@
   </Folder>
   <Project Path="DowdetectorMCP.Server/DowdetectorMCP.Server.csproj" Id="82a9b76d-f97c-47e9-bf0a-8808ef1bda63" />
   <Project Path="DowndetectorMCP.API/DowndetectorMCP.API.csproj" Id="e519fa8e-24af-4a6b-a447-0682cb197190" />
+  <Project Path="DowndetectorMCP.Shared/DowndetectorMCP.Shared.csproj" Id="0753950e-81af-4514-b274-7b62aa8ba365" />
 </Solution>

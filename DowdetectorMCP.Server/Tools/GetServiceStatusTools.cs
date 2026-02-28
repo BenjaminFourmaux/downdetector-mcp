@@ -12,7 +12,8 @@ namespace DowdetectorMCP.Server.Tools
         [McpServerTool]
         [Description("Get comprehensive status information for an online service, including current status, report counts compared to baseline, 24-hour historical data, and most reported outage causes")]
         public static async Task<string> GetServiceStatus(
-            [Description("The technical service name")] string technicalServiceName,
+            [Description("Name of the service")] string serviceName,
+            [Description("The technical service name (slug)")] string technicalServiceName,
             [Description("The country in which we want to know the status of the service")] string country,
             [Description("Include or not the last 24 hours status series (4 points per hour, total 96). By default, false")] bool includeHistoricalReportData = false)
         {
@@ -20,7 +21,7 @@ namespace DowdetectorMCP.Server.Tools
             {
                 var downdetectorAPI = new DowndetectorAPI(country);
 
-                var serviceData = await downdetectorAPI.GetServiceStatus(technicalServiceName, includeHistoricalReportData);
+                var serviceData = await downdetectorAPI.GetServiceStatus(serviceName, technicalServiceName, false);
 
                 return serviceData.ToToon();
             }

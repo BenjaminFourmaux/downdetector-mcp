@@ -22,6 +22,7 @@ namespace DowdetectorMCP.Server.Resources
                 - ServiceName: The real service name
                 - TechnicalName: The name of the service used to retrieve service status
                 - Url: The Donwdetector service URL
+                - Category: Name of the service catgory
                 """;
         }
 

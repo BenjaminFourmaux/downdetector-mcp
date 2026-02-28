@@ -1,4 +1,4 @@
-﻿using DowndetectorMCP.API.Utils;
+﻿using DowndetectorMCP.Shared.Extensions;
 
 namespace DowndetectorMCP.API.Models
 {
