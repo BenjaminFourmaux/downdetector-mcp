@@ -17,6 +17,9 @@ Providing data on the status of online services for agentic AI applications.
 
 List of tools available in this MCP server
 
+> [!IMPORTANT]
+> Due to the recent change of Downdetector website, it is becoming increasingly defficult to recover data. Some data may be missing.
+
 ### SearchServiceName
 
 Used to retrieve the correct service name same as named in Downdetector (also name `TechnicalServiceName` in the MCP).
@@ -39,11 +42,11 @@ Tool calling with params :
 
 ```toon
 SearchWord: google
-Results[4]{ServiceName,TechnicalName,Url}:
+Results[4]{ServiceName,TechnicalName,Url,Category}:
   Google,google,https://downdetector.com/status/google
-  Google Cloud,google-cloud,https://downdetector.com/status/google-cloud
-  Google Gemini,googlegemini,https://downdetector.com/status/googlegemini
-  Google Nest,google-nest,https://downdetector.com/status/google-nest
+  Google Cloud,google-cloud,https://downdetector.com/status/google-cloud,search portals
+  Google Gemini,googlegemini,https://downdetector.com/status/googlegemini,ai platforms
+  Google Nest,google-nest,https://downdetector.com/status/google-nest,home automation security
 ```
 
 ### GetServiceStatus
@@ -137,6 +140,27 @@ dotnet run --project DowdetectorMCP.Server
 ```
 
 The server starts on `http://localhost:5057` by default.
+
+### Test in Visual Studio Copilot 
+
+On "Configure tools" page of GitHub Copilot, add a MCP server.
+
+In the file `mcp.json` that configure custom MCP's in your VS Code env, enter the following settings:
+
+```json
+{
+	"servers": {
+		"downdetector-mcp": {
+			"url": "http://localhost:5057/mcp",
+			"type": "http",
+			"trusted": true
+		}
+	},
+	"inputs": []
+}
+```
+
+Et voilà you can use this MCP server directly on your Copilot.
 
 ## How it works 🏗
 

@@ -24,5 +24,6 @@ namespace DowndetectorMCP.API.Models
         public string ServiceName { get; set; } = string.Empty;
         public string TechnicalName { get; set; } = string.Empty;
         public string Url { get; set; } = string.Empty;
+        public string Category {  get; set; } = string.Empty;
     }
 }
